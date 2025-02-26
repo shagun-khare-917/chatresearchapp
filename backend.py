@@ -26,59 +26,61 @@ def upload_file():
         return jsonify({'error': f'Failed to process chat: {str(e)}'}), 500
 
 def process_chat(filepath):
-    with open(filepath, 'r', encoding='utf-8') as f:
-        chat_lines = f.readlines()
+    chat_data = []
+    previous_time = None
 
-    messages = []
-    sender1, sender2 = None, None
-    timestamps = []
-    
-    # Updated regex to handle various spacing issues
-    message_pattern = re.compile(r'^\[(.*?)\] (.*?): (.*)$')
+    with open(filepath, 'r', encoding='utf-8') as file:
+        for line in file:
+            # Regex to parse lines in the format: [timestamp] sender: message
+            match = re.match(r'\[(.*?)\] (.*?): (.*)', line)
+            if match:
+                timestamp = match.group(1)
+                message = match.group(3)
+                
+                # Clean and parse the timestamp
+                timestamp = timestamp.replace("\u202f", " ").strip()
+                try:
+                    time_obj = datetime.strptime(timestamp, "%m/%d/%y, %I:%M:%S %p")
+                except ValueError as e:
+                    print(f"Error parsing timestamp: {timestamp}. Error: {e}")
+                    continue
 
-    for line in chat_lines:
-        match = message_pattern.match(line.strip())
-        if match:
-            timestamp_str, sender, message = match.groups()
-            
-            # Fix hidden Unicode spaces and parse timestamp safely
-            try:
-                timestamp_str = timestamp_str.replace(" ", " ")  # Replace narrow no-break spaces
-                timestamp = datetime.strptime(timestamp_str, "%m/%d/%y, %I:%M:%S %p")
-                timestamps.append(timestamp)
-            except ValueError as e:
-                print(f"Skipping invalid timestamp: {timestamp_str} - Error: {e}")
-                continue
+                # Calculate time elapsed
+                time_elapsed = None
+                if previous_time:
+                    elapsed = time_obj - previous_time
+                    total_minutes = round(elapsed.total_seconds() / 60, 2)
+                    if total_minutes >= 60:
+                        hours = int(total_minutes // 60)
+                        minutes = int(total_minutes % 60)
+                        time_elapsed = f"{hours} hrs {minutes} mins"
+                    else:
+                        time_elapsed = f"{total_minutes} mins"
+                previous_time = time_obj
 
-            if sender1 is None:
-                sender1 = sender
-            elif sender2 is None and sender != sender1:
-                sender2 = sender
+                # Calculate message length
+                message_length = len(message)
 
-            anon_sender = 'Sender 1' if sender == sender1 else 'Sender 2'
-            messages.append({'sender': anon_sender, 'message': message.strip(), 'timestamp': timestamp})
+                # Append anonymized data
+                chat_data.append({
+                    'time': time_obj.strftime("%H:%M:%S"),
+                    'time_elapsed': time_elapsed if time_elapsed else "N/A",
+                    'message_length': message_length
+                })
 
-    return analyze_messages(messages, timestamps)
+    return analyze_messages(chat_data)
 
-def analyze_messages(messages, timestamps):
+def analyze_messages(messages):
     total_messages = len(messages)
-    sender1_msgs = [msg for msg in messages if msg['sender'] == 'Sender 1']
-    sender2_msgs = [msg for msg in messages if msg['sender'] == 'Sender 2']
-
-    avg_msg_length = sum(len(msg['message']) for msg in messages) / total_messages if total_messages else 0
+    avg_msg_length = sum(msg['message_length'] for msg in messages) / total_messages if total_messages else 0
     
-    # Calculate time differences
-    if len(timestamps) > 1:
-        time_diffs = [(timestamps[i] - timestamps[i - 1]).seconds / 60 for i in range(1, len(timestamps))]
-        avg_time_between = sum(time_diffs) / len(time_diffs)
-    else:
-        avg_time_between = 0
+    # Calculate average time between messages
+    time_diffs = [msg['time_elapsed'] for msg in messages if msg['time_elapsed'] != "N/A"]
+    avg_time_between = sum([float(t.split()[0]) for t in time_diffs if "mins" in t]) / len(time_diffs) if time_diffs else 0
 
     stats = {
         'total_messages': total_messages,
         'average_message_length': round(avg_msg_length, 2),
-        'sender_1_count': len(sender1_msgs),
-        'sender_2_count': len(sender2_msgs),
         'average_time_between_messages': round(avg_time_between, 2)
     }
     return stats
