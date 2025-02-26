@@ -19,8 +19,11 @@ def upload_file():
     filepath = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(filepath)
 
-    chat_data = process_chat(filepath)
-    return jsonify(chat_data)
+    try:
+        chat_data = process_chat(filepath)
+        return jsonify(chat_data)
+    except Exception as e:
+        return jsonify({'error': f'Failed to process chat: {str(e)}'}), 500
 
 def process_chat(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -30,14 +33,22 @@ def process_chat(filepath):
     sender1, sender2 = None, None
     timestamps = []
     
+    # Updated regex to handle various spacing issues
     message_pattern = re.compile(r'^\[(.*?)\] (.*?): (.*)$')
 
     for line in chat_lines:
         match = message_pattern.match(line.strip())
         if match:
             timestamp_str, sender, message = match.groups()
-            timestamp = datetime.strptime(timestamp_str, "%m/%d/%y, %I:%M:%S %p")
-            timestamps.append(timestamp)
+            
+            # Fix hidden Unicode spaces and parse timestamp safely
+            try:
+                timestamp_str = timestamp_str.replace(" ", " ")  # Replace narrow no-break spaces
+                timestamp = datetime.strptime(timestamp_str, "%m/%d/%y, %I:%M:%S %p")
+                timestamps.append(timestamp)
+            except ValueError as e:
+                print(f"Skipping invalid timestamp: {timestamp_str} - Error: {e}")
+                continue
 
             if sender1 is None:
                 sender1 = sender
@@ -47,8 +58,7 @@ def process_chat(filepath):
             anon_sender = 'Sender 1' if sender == sender1 else 'Sender 2'
             messages.append({'sender': anon_sender, 'message': message.strip(), 'timestamp': timestamp})
 
-    stats = analyze_messages(messages, timestamps)
-    return stats
+    return analyze_messages(messages, timestamps)
 
 def analyze_messages(messages, timestamps):
     total_messages = len(messages)
@@ -66,7 +76,7 @@ def analyze_messages(messages, timestamps):
 
     stats = {
         'total_messages': total_messages,
-        'average_message_length': avg_msg_length,
+        'average_message_length': round(avg_msg_length, 2),
         'sender_1_count': len(sender1_msgs),
         'sender_2_count': len(sender2_msgs),
         'average_time_between_messages': round(avg_time_between, 2)
