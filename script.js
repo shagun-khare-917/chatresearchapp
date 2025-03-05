@@ -79,6 +79,9 @@ function displayStatistics(messages, senderStats) {
         senderStatsHTML += `<p>Mean Time Between Messages: ${meanInterval.toFixed(2)} mins, Std Dev: ${stdDev.toFixed(2)} mins</p>`;
     });
 
+    const analysisText = `Total Messages: ${totalMessages}\nAverage Message Length: ${averageMessageLength.toFixed(2)} characters\nAverage Time Between Messages: ${avgTimeBetween.toFixed(2)} minutes\n\n${senderStatsHTML.replace(/<[^>]+>/g, '')}`;
+    document.getElementById("downloadAnalysis").setAttribute("data-content", analysisText);
+
     resultsDiv.innerHTML = `
         <h2>Chat Analysis Results</h2>
         <p><strong>Total Messages:</strong> ${totalMessages}</p>
@@ -86,4 +89,15 @@ function displayStatistics(messages, senderStats) {
         <p><strong>Average Time Between Messages:</strong> ${avgTimeBetween.toFixed(2)} minutes</p>
         ${senderStatsHTML}
     `;
+}
+
+function downloadAnalysis() {
+    const data = document.getElementById("downloadAnalysis").getAttribute("data-content");
+    const blob = new Blob([data], { type: "text/plain" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "chat_analysis.txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
