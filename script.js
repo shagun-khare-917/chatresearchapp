@@ -27,8 +27,8 @@ function analyzeChat() {
 
             let timeElapsed = "N/A";
             if (previousTime) {
-                let elapsedMinutes = Math.round((timestamp - previousTime) / (1000 * 60));
-                timeElapsed = elapsedMinutes > 60 ? `${Math.floor(elapsedMinutes / 60)} hrs ${elapsedMinutes % 60} mins` : `${elapsedMinutes} mins`;
+                let elapsedMinutes = (timestamp - previousTime) / (1000 * 60);
+                timeElapsed = elapsedMinutes > 60 ? `${Math.floor(elapsedMinutes / 60)} hrs ${Math.round(elapsedMinutes % 60)} mins` : `${elapsedMinutes.toFixed(2)} mins`;
             }
             previousTime = timestamp;
 
@@ -40,10 +40,11 @@ function analyzeChat() {
             let anonSender = senderMap[sender];
 
             if (!senderStats[anonSender]) {
-                senderStats[anonSender] = { count: 0, totalLength: 0 };
+                senderStats[anonSender] = { count: 0, totalLength: 0, messageTimes: [] };
             }
             senderStats[anonSender].count += 1;
             senderStats[anonSender].totalLength += message.length;
+            senderStats[anonSender].messageTimes.push(timestamp);
 
             messages.push({ sender: anonSender, message, timestamp, timeElapsed });
         }
@@ -70,7 +71,12 @@ function displayStatistics(messages, senderStats) {
     let senderStatsHTML = "<h3>Sender Statistics</h3>";
     Object.keys(senderStats).forEach(anonSender => {
         let avgLength = senderStats[anonSender].totalLength / senderStats[anonSender].count;
+        let messageIntervals = senderStats[anonSender].messageTimes.map((t, i, arr) => i > 0 ? (t - arr[i - 1]) / (1000 * 60) : 0).slice(1);
+        let meanInterval = messageIntervals.length > 0 ? messageIntervals.reduce((a, b) => a + b, 0) / messageIntervals.length : 0;
+        let stdDev = messageIntervals.length > 1 ? Math.sqrt(messageIntervals.map(x => Math.pow(x - meanInterval, 2)).reduce((a, b) => a + b, 0) / messageIntervals.length) : 0;
+        
         senderStatsHTML += `<p><strong>${anonSender}</strong>: ${senderStats[anonSender].count} messages, Avg Length: ${avgLength.toFixed(2)} characters</p>`;
+        senderStatsHTML += `<p>Mean Time Between Messages: ${meanInterval.toFixed(2)} mins, Std Dev: ${stdDev.toFixed(2)} mins</p>`;
     });
 
     resultsDiv.innerHTML = `
