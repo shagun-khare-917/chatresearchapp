@@ -9,8 +9,8 @@
 <body>
     <div class="container">
         <h1>Chat History Analyzer</h1>
-        <input type="file" id="fileInput" accept=".txt, .json">
-        <button onclick="uploadFile()">Upload and Analyze</button>
+        <textarea id="chatInput" placeholder="Paste your chat history here..." rows="10"></textarea>
+        <button onclick="analyzeChat()">Analyze</button>
         <div id="results"></div>
     </div>
     <script src="script.js"></script>

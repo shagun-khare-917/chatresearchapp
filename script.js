@@ -1,35 +1,60 @@
-function uploadFile() {
-    const fileInput = document.getElementById('fileInput');
-    const resultsDiv = document.getElementById('results');
+function analyzeChat() {
+    const chatInput = document.getElementById("chatInput").value;
+    const resultsDiv = document.getElementById("results");
 
-    if (fileInput.files.length === 0) {
-        alert('Please select a file to upload.');
+    if (!chatInput.trim()) {
+        alert("Please paste chat history before analyzing.");
         return;
     }
 
-    const file = fileInput.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
+    const chatLines = chatInput.split("\n");
+    const messagePattern = /^\[(.*?)\] (.*?): (.*)$/;
+    let messages = [];
+    let previousTime = null;
 
-    resultsDiv.innerHTML = "<p>Uploading and analyzing chat...</p>";
+    chatLines.forEach(line => {
+        const match = messagePattern.exec(line);
+        if (match) {
+            let timestampStr = match[1].replace("\u202f", " ").trim();
+            let sender = match[2];
+            let message = match[3];
 
-    fetch('http://127.0.0.1:5000/upload', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        resultsDiv.innerHTML = `
-            <h2>Chat Analysis Results</h2>
-            <p><strong>Total Messages:</strong> ${data.total_messages}</p>
-            <p><strong>Average Message Length:</strong> ${data.average_message_length.toFixed(2)} characters</p>
-            <p><strong>Sender 1 Messages:</strong> ${data.sender_1_count}</p>
-            <p><strong>Sender 2 Messages:</strong> ${data.sender_2_count}</p>
-            <p><strong>Average Time Between Messages:</strong> ${data.average_time_between_messages} minutes</p>
-        `;
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        resultsDiv.innerHTML = "<p>Error processing chat. Please try again.</p>";
+            let timestamp = new Date(timestampStr);
+            if (isNaN(timestamp)) return;
+
+            let timeElapsed = "N/A";
+            if (previousTime) {
+                let elapsedMinutes = Math.round((timestamp - previousTime) / (1000 * 60));
+                timeElapsed = elapsedMinutes > 60 ? `${Math.floor(elapsedMinutes / 60)} hrs ${elapsedMinutes % 60} mins` : `${elapsedMinutes} mins`;
+            }
+            previousTime = timestamp;
+
+            messages.push({ sender, message, timestamp, timeElapsed });
+        }
     });
+
+    displayStatistics(messages);
+}
+
+function displayStatistics(messages) {
+    const resultsDiv = document.getElementById("results");
+    
+    if (messages.length === 0) {
+        resultsDiv.innerHTML = "<p>No valid messages found.</p>";
+        return;
+    }
+
+    const totalMessages = messages.length;
+    const averageMessageLength = messages.reduce((sum, msg) => sum + msg.message.length, 0) / totalMessages;
+    const avgTimeBetween = messages
+        .filter(msg => msg.timeElapsed !== "N/A")
+        .map(msg => parseFloat(msg.timeElapsed))
+        .reduce((sum, val, _, arr) => sum + val / arr.length, 0);
+
+    resultsDiv.innerHTML = `
+        <h2>Chat Analysis Results</h2>
+        <p><strong>Total Messages:</strong> ${totalMessages}</p>
+        <p><strong>Average Message Length:</strong> ${averageMessageLength.toFixed(2)} characters</p>
+        <p><strong>Average Time Between Messages:</strong> ${avgTimeBetween.toFixed(2)} minutes</p>
+    `;
 }
