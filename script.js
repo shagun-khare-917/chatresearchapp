@@ -12,6 +12,8 @@ function analyzeChat() {
     let messages = [];
     let previousTime = null;
     let senderStats = {};
+    let senderMap = {};
+    let senderCounter = 1;
 
     chatLines.forEach(line => {
         const match = messagePattern.exec(line);
@@ -30,13 +32,20 @@ function analyzeChat() {
             }
             previousTime = timestamp;
 
-            if (!senderStats[sender]) {
-                senderStats[sender] = { count: 0, totalLength: 0 };
+            // Anonymize sender
+            if (!(sender in senderMap)) {
+                senderMap[sender] = `Sender ${senderCounter}`;
+                senderCounter++;
             }
-            senderStats[sender].count += 1;
-            senderStats[sender].totalLength += message.length;
+            let anonSender = senderMap[sender];
 
-            messages.push({ sender, message, timestamp, timeElapsed });
+            if (!senderStats[anonSender]) {
+                senderStats[anonSender] = { count: 0, totalLength: 0 };
+            }
+            senderStats[anonSender].count += 1;
+            senderStats[anonSender].totalLength += message.length;
+
+            messages.push({ sender: anonSender, message, timestamp, timeElapsed });
         }
     });
 
@@ -59,9 +68,9 @@ function displayStatistics(messages, senderStats) {
         .reduce((sum, val, _, arr) => sum + val / arr.length, 0);
 
     let senderStatsHTML = "<h3>Sender Statistics</h3>";
-    Object.keys(senderStats).forEach(sender => {
-        let avgLength = senderStats[sender].totalLength / senderStats[sender].count;
-        senderStatsHTML += `<p><strong>${sender}</strong>: ${senderStats[sender].count} messages, Avg Length: ${avgLength.toFixed(2)} characters</p>`;
+    Object.keys(senderStats).forEach(anonSender => {
+        let avgLength = senderStats[anonSender].totalLength / senderStats[anonSender].count;
+        senderStatsHTML += `<p><strong>${anonSender}</strong>: ${senderStats[anonSender].count} messages, Avg Length: ${avgLength.toFixed(2)} characters</p>`;
     });
 
     resultsDiv.innerHTML = `
