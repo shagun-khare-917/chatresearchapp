@@ -3,16 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Analyzer</title>
+    <title>Chat History Analyzer</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <h1>Chat History Analyzer</h1>
-        <textarea id="chatInput" placeholder="Paste your chat history here..." rows="10"></textarea>
-        <button onclick="analyzeChat()">Analyze</button>
-        <div id="results"></div>
+        <p>Welcome to the Chat History Analyzer! Paste your chat data in the following format:</p>
+        <pre>
+[2/25/24, 10:15:23 AM] Alice: Hey! How are you?
+[2/25/24, 10:16:45 AM] Bob: I'm good, how about you?
+[2/25/24, 10:18:02 AM] Alice: Doing well! Just wanted to check in about the project.
+[2/25/24, 10:20:15 AM] Bob: Yeah, I think we should finalize our parts by tomorrow.
+[2/25/24, 10:22:30 AM] Alice: That sounds good. I’ll review everything tonight.
+[2/25/24, 10:25:50 AM] Bob: Awesome. Let me know if you need any help.
+[2/25/24, 10:27:10 AM] Alice: Will do! Thanks!
+        </pre>
+        <p>Click the button below to proceed to the analyzer:</p>
+        <button onclick="location.href='analyzer.html'">Go to Analyzer</button>
     </div>
-    <script src="script.js"></script>
 </body>
 </html>
