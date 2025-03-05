@@ -11,6 +11,7 @@ function analyzeChat() {
     const messagePattern = /^\[(.*?)\] (.*?): (.*)$/;
     let messages = [];
     let previousTime = null;
+    let senderStats = {};
 
     chatLines.forEach(line => {
         const match = messagePattern.exec(line);
@@ -29,14 +30,20 @@ function analyzeChat() {
             }
             previousTime = timestamp;
 
+            if (!senderStats[sender]) {
+                senderStats[sender] = { count: 0, totalLength: 0 };
+            }
+            senderStats[sender].count += 1;
+            senderStats[sender].totalLength += message.length;
+
             messages.push({ sender, message, timestamp, timeElapsed });
         }
     });
 
-    displayStatistics(messages);
+    displayStatistics(messages, senderStats);
 }
 
-function displayStatistics(messages) {
+function displayStatistics(messages, senderStats) {
     const resultsDiv = document.getElementById("results");
     
     if (messages.length === 0) {
@@ -51,10 +58,17 @@ function displayStatistics(messages) {
         .map(msg => parseFloat(msg.timeElapsed))
         .reduce((sum, val, _, arr) => sum + val / arr.length, 0);
 
+    let senderStatsHTML = "<h3>Sender Statistics</h3>";
+    Object.keys(senderStats).forEach(sender => {
+        let avgLength = senderStats[sender].totalLength / senderStats[sender].count;
+        senderStatsHTML += `<p><strong>${sender}</strong>: ${senderStats[sender].count} messages, Avg Length: ${avgLength.toFixed(2)} characters</p>`;
+    });
+
     resultsDiv.innerHTML = `
         <h2>Chat Analysis Results</h2>
         <p><strong>Total Messages:</strong> ${totalMessages}</p>
         <p><strong>Average Message Length:</strong> ${averageMessageLength.toFixed(2)} characters</p>
         <p><strong>Average Time Between Messages:</strong> ${avgTimeBetween.toFixed(2)} minutes</p>
+        ${senderStatsHTML}
     `;
 }
